@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kantor">
+<meta name="theme-color" content="#14181c">
+<title>Kantor — przelicznik na PLN</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2314181c'/%3E%3Ctext x='50' y='64' font-size='44' font-family='monospace' font-weight='bold' fill='%23ffb020' text-anchor='middle'%3Ez%C5%82%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12161a;
+    --panel: #1b2128;
+    --panel-2: #21282f;
+    --led: #ffb020;
+    --led-dim: #6b4a12;
+    --teal: #35d4c7;
+    --text: #f2efe9;
+    --muted: #7d8894;
+    --line: #2c343c;
+    --danger: #e0654f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% -10%, #1e2830 0%, transparent 45%),
+      radial-gradient(circle at 110% 10%, #201a14 0%, transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Space Grotesk', system-ui, sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:28px 16px 60px;
+  }
+
+  .board{
+    width:100%;
+    max-width:420px;
+  }
+
+  .header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:18px;
+    padding:0 4px;
+  }
+  .header .eyebrow{
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .header h1{
+    margin:2px 0 0;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:-.01em;
+  }
+  .header h1 span{ color:var(--led); }
+
+  .pin{
+    width:9px; height:9px; border-radius:50%;
+    background: var(--muted);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.03);
+  }
+  .pin.online{ background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+  .pin.offline{ background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+  .panel{
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px 20px;
+    box-shadow: 0 20px 40px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+
+  .row{ margin-bottom:18px; }
+  .row:last-child{ margin-bottom:0; }
+
+  label{
+    display:block;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+
+  .amount-input{
+    width:100%;
+    background:#0e1216;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:14px 16px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:26px;
+    font-weight:600;
+    color:var(--text);
+    outline:none;
+    transition:border-color .15s;
+  }
+  .amount-input:focus{ border-color: var(--teal); }
+
+  .select-row{ display:flex; gap:10px; align-items:stretch; }
+  .select-wrap{ position:relative; flex:1; }
+  select.currency-select{
+    width:100%;
+    height:100%;
+    appearance:none;
+    -webkit-appearance:none;
+    background:#0e1216;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:14px 40px 14px 16px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:17px;
+    font-weight:600;
+    color:var(--text);
+    outline:none;
+  }
+  select.currency-select:focus{ border-color: var(--teal); }
+  .select-wrap::after{
+    content:"▾";
+    position:absolute;
+    right:16px; top:50%;
+    transform:translateY(-50%);
+    color:var(--muted);
+    pointer-events:none;
+    font-size:14px;
+  }
+
+  .star-btn{
+    width:54px;
+    flex:0 0 54px;
+    background:#0e1216;
+    border:1px solid var(--line);
+    border-radius:12px;
+    color:var(--muted);
+    font-size:24px;
+    line-height:1;
+    cursor:pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .star-btn.active{
+    color:var(--led);
+    text-shadow:0 0 8px rgba(255,176,32,.5);
+    border-color: rgba(255,176,32,.45);
+  }
+  .star-btn:active{ border-color: var(--teal); }
+
+  .default-hint{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:.02em;
+  }
+  .default-hint b{ color:var(--text); font-weight:600; }
+
+  .swap-hint{
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    margin: 14px 0;
+    letter-spacing:.05em;
+  }
+
+  .result-board{
+    background:#0a0d10;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 18px 18px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .result-board::before{
+    content:"";
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(
+      0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px,
+      transparent 1px, transparent 3px
+    );
+    pointer-events:none;
+  }
+  .result-label{
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .led-display{
+    font-family:'VT323', monospace;
+    font-size:56px;
+    line-height:1;
+    color:var(--led);
+    text-shadow: 0 0 6px rgba(255,176,32,0.55), 0 0 22px rgba(255,176,32,0.25);
+    letter-spacing:.02em;
+    word-break:break-word;
+  }
+  .led-display .ghost{ color: var(--led-dim); text-shadow:none; }
+  .led-suffix{
+    font-size:20px;
+    color: var(--led);
+    opacity:0.75;
+    margin-left:6px;
+  }
+
+  .rate-line{
+    margin-top:14px;
+    font-size:12.5px;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:4px 10px;
+  }
+  .rate-line b{ color:var(--text); font-weight:600; }
+
+  .status-line{
+    margin-top:16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  .refresh-btn{
+    margin-top:16px;
+    width:100%;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--teal);
+    border-radius:12px;
+    padding:12px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.03em;
+    cursor:pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .refresh-btn:active{ background: rgba(53,212,199,0.08); border-color: var(--teal); }
+  .refresh-btn:disabled{ opacity:.5; }
+
+  .footnote{
+    text-align:center;
+    color:var(--muted);
+    font-size:11px;
+    margin-top:20px;
+    letter-spacing:.03em;
+    opacity:.7;
+  }
+
+  /* ---- Blok „Dodaj do notatnika" (pod wynikiem) ---- */
+  .add-note{ margin-top:16px; }
+  .comment-input{
+    width:100%;
+    background:#0e1216;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 14px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    color:var(--text);
+    outline:none;
+    transition:border-color .15s;
+  }
+  .comment-input::placeholder{ color:var(--muted); }
+  .comment-input:focus{ border-color: var(--teal); }
+
+  .add-note-btn{
+    margin-top:10px;
+    width:100%;
+    background: rgba(53,212,199,0.10);
+    border:1px solid rgba(53,212,199,0.45);
+    color: var(--teal);
+    border-radius:12px;
+    padding:13px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:.02em;
+    cursor:pointer;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .add-note-btn:active{ background: rgba(53,212,199,0.18); }
+  .add-note-btn:disabled{ opacity:.45; }
+  .add-note-btn.ok{
+    background: rgba(255,176,32,0.12);
+    border-color: rgba(255,176,32,0.5);
+    color: var(--led);
+  }
+  .add-note-target{
+    margin-top:8px;
+    font-size:12px;
+    color: var(--muted);
+    text-align:center;
+    letter-spacing:.02em;
+  }
+  .add-note-target b{ color: var(--text); font-weight:600; }
+  .add-note-target.warn{ color: var(--danger); }
+
+  /* ---- Panel notatnika ---- */
+  .notebook-panel{ margin-top:16px; }
+  .nb-head{ margin-bottom:2px; }
+  .nb-new-btn{ font-size:26px; }
+
+  .nb-form{ margin-top:12px; }
+  .nb-form-actions{ display:flex; gap:10px; margin-top:10px; }
+  .mini-btn{
+    flex:1;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px; font-weight:600;
+    cursor:pointer;
+    transition:border-color .15s;
+  }
+  .mini-btn.accent{ color: var(--teal); border-color: rgba(53,212,199,0.45); }
+  .mini-btn:active{ border-color: var(--teal); }
+
+  .entries{ margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+  .entries-empty{ color:var(--muted); font-size:13px; text-align:center; padding:10px 0; }
+  .entry{
+    display:flex; gap:10px; align-items:flex-start;
+    background:#0e1216;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 12px 12px 14px;
+  }
+  .entry-body{ flex:1; min-width:0; }
+  .entry-line1{ font-size:14px; font-weight:600; margin-bottom:3px; word-break:break-word; }
+  .entry-line1 .muted{ color:var(--muted); font-weight:400; }
+  .entry-line2{ font-size:15px; color:var(--text); }
+  .entry-line2 .arrow{ color:var(--muted); margin:0 4px; }
+  .entry-line2 .pln{ color:var(--led); font-weight:600; }
+  .entry-line3{ font-size:11.5px; color:var(--muted); margin-top:4px; letter-spacing:.02em; }
+  .entry-del{
+    flex:0 0 auto;
+    background:transparent; border:none; cursor:pointer;
+    font-size:16px; line-height:1; padding:4px; opacity:.6;
+  }
+  .entry-del:active{ opacity:1; }
+
+  .entries-total{ margin-top:14px; text-align:right; font-size:13px; color:var(--muted); }
+  .entries-total b{ color:var(--led); font-weight:600; }
+
+  .nb-bottom{ margin-top:16px; }
+  .export-btn{
+    width:100%;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--teal);
+    border-radius:12px;
+    padding:12px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px; font-weight:600; letter-spacing:.03em;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .export-btn:active{ background: rgba(53,212,199,0.08); border-color: var(--teal); }
+  .nb-links{ margin-top:10px; text-align:center; font-size:12.5px; color:var(--muted); }
+  .link-btn{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-family:'Space Grotesk', sans-serif; font-size:12.5px; padding:4px 2px;
+  }
+  .link-btn:active{ color:var(--text); }
+  .link-btn.danger{ color:#b9705f; }
+  .link-btn.danger:active{ color:var(--danger); }
+  .dot-sep{ opacity:.5; margin:0 4px; }
+
+  .nb-import{ margin-top:10px; }
+  .import-btn{
+    width:100%;
+    background:transparent;
+    border:1px dashed var(--line);
+    color:var(--muted);
+    border-radius:12px;
+    padding:11px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px; font-weight:600; letter-spacing:.03em;
+    cursor:pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .import-btn:active{ color:var(--text); border-color: var(--teal); }
+</style>
+</head>
+<body>
+
+<div class="board">
+  <div class="header">
+    <div>
+      <div class="eyebrow">Tablica kursowa</div>
+      <h1>Kanto<span>r</span></h1>
+    </div>
+    <div id="statusPin" class="pin"></div>
+  </div>
+
+  <div class="panel">
+
+    <div class="row">
+      <label for="currency">Waluta</label>
+      <div class="select-row">
+        <div class="select-wrap">
+          <select id="currency" class="currency-select"></select>
+        </div>
+        <button id="defaultBtn" class="star-btn" type="button" aria-label="Ustaw jako domyślną">☆</button>
+      </div>
+      <div class="default-hint" id="defaultHint"></div>
+    </div>
+
+    <div class="row">
+      <label for="amount">Kwota</label>
+      <input id="amount" class="amount-input" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" value="100">
+    </div>
+
+    <div class="swap-hint">↓ przeliczono na złotówki ↓</div>
+
+    <div class="result-board">
+      <div class="result-label">Wartość w PLN</div>
+      <div class="led-display" id="ledResult">0,00<span class="led-suffix">zł</span></div>
+      <div class="rate-line">
+        <span>Kurs: <b id="rateValue">—</b></span>
+        <span id="rateDate"></span>
+      </div>
+    </div>
+
+    <div class="add-note">
+      <input id="noteComment" class="comment-input" type="text" autocomplete="off" placeholder="Komentarz (np. paliwo, kolacja, market)" maxlength="80">
+      <button id="addNoteBtn" class="add-note-btn" type="button">＋ Dodaj do notatnika</button>
+      <div class="add-note-target" id="addNoteTarget"></div>
+    </div>
+
+    <div class="status-line">
+      <span id="statusText">Sprawdzam połączenie…</span>
+    </div>
+
+    <button class="refresh-btn" id="refreshBtn">Odśwież kurs</button>
+  </div>
+
+  <div class="panel notebook-panel">
+    <div class="nb-head">
+      <label for="notebookSelect">Notatnik</label>
+    </div>
+
+    <div class="select-row">
+      <div class="select-wrap">
+        <select id="notebookSelect" class="currency-select"></select>
+      </div>
+      <button id="notebookStar" class="star-btn" type="button" aria-label="Ustaw jako aktywną notatkę">☆</button>
+      <button id="notebookNew" class="star-btn nb-new-btn" type="button" aria-label="Nowa notatka">＋</button>
+    </div>
+    <div class="default-hint" id="notebookHint"></div>
+
+    <div class="nb-form" id="nbForm" hidden>
+      <input id="nbNameInput" class="comment-input" type="text" autocomplete="off" placeholder="Nazwa notatki, np. Albania 2026" maxlength="40">
+      <div class="nb-form-actions">
+        <button id="nbFormSave" class="mini-btn accent" type="button">Utwórz</button>
+        <button id="nbFormCancel" class="mini-btn" type="button">Anuluj</button>
+      </div>
+    </div>
+
+    <div class="entries" id="entriesList"></div>
+    <div class="entries-total" id="entriesTotal"></div>
+
+    <div class="nb-bottom" id="nbBottom" hidden>
+      <button id="exportBtn" class="export-btn" type="button">Eksportuj do pliku (CSV)</button>
+      <div class="nb-links">
+        <button id="renameBtn" class="link-btn" type="button">Zmień nazwę</button>
+        <span class="dot-sep">·</span>
+        <button id="deleteNbBtn" class="link-btn danger" type="button">Usuń notatnik</button>
+      </div>
+    </div>
+
+    <div class="nb-import">
+      <input type="file" id="importFile" accept=".csv,.txt,text/csv,text/plain" hidden>
+      <button id="importBtn" class="import-btn" type="button">Importuj z pliku (CSV)</button>
+    </div>
+  </div>
+
+  <div class="footnote">Dane: ExchangeRate-API (open.er-api.com) · kursy referencyjne, nie transakcyjne</div>
+</div>
+
+<script>
+(function(){
+  const CURRENCIES = [
+    {code:'EUR', name:'Euro'},
+    {code:'USD', name:'Dolar amerykański'},
+    {code:'GBP', name:'Funt brytyjski'},
+    {code:'CHF', name:'Frank szwajcarski'},
+    {code:'CZK', name:'Korona czeska'},
+    {code:'NOK', name:'Korona norweska'},
+    {code:'SEK', name:'Korona szwedzka'},
+    {code:'DKK', name:'Korona duńska'},
+    {code:'HUF', name:'Forint węgierski'},
+    {code:'CAD', name:'Dolar kanadyjski'},
+    {code:'AUD', name:'Dolar australijski'},
+    {code:'JPY', name:'Jen japoński'},
+    {code:'ALL', name:'Lek albański'},
+  ];
+
+  const STORAGE_KEY = 'kantor_rates_v2';
+  const DEFAULT_CCY_KEY = 'kantor_default_ccy';
+  const API_URL = 'https://open.er-api.com/v6/latest/PLN';
+
+  const currencySelect = document.getElementById('currency');
+  const amountInput = document.getElementById('amount');
+  const ledResult = document.getElementById('ledResult');
+  const rateValueEl = document.getElementById('rateValue');
+  const rateDateEl = document.getElementById('rateDate');
+  const statusText = document.getElementById('statusText');
+  const statusPin = document.getElementById('statusPin');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const defaultBtn = document.getElementById('defaultBtn');
+  const defaultHint = document.getElementById('defaultHint');
+
+  CURRENCIES.forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c.code;
+    opt.textContent = c.code + ' — ' + c.name;
+    currencySelect.appendChild(opt);
+  });
+
+  let defaultCcy = localStorage.getItem(DEFAULT_CCY_KEY);
+  if(!defaultCcy || !CURRENCIES.some(c=>c.code===defaultCcy)){
+    defaultCcy = 'EUR';
+  }
+  currencySelect.value = defaultCcy;
+
+  let ratesData = loadCache();
+
+  function loadCache(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+
+  function saveCache(data){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){}
+  }
+
+  function formatDateTime(iso){
+    const d = new Date(iso);
+    return d.toLocaleString('pl-PL', {
+      day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit'
+    });
+  }
+
+  function formatNumber(n){
+    return n.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function formatRate(n){
+    return n.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:4});
+  }
+
+  function updateStar(){
+    const isDefault = currencySelect.value === defaultCcy;
+    defaultBtn.textContent = isDefault ? '★' : '☆';
+    defaultBtn.classList.toggle('active', isDefault);
+    if(isDefault){
+      defaultHint.innerHTML = 'Domyślna waluta: <b>' + defaultCcy + '</b> — z nią apka startuje';
+    }else{
+      defaultHint.innerHTML = 'Stuknij ☆, aby ustawić <b>' + currencySelect.value + '</b> jako domyślną';
+    }
+  }
+
+  async function fetchRates(){
+    setStatus('Pobieram aktualny kurs…', null);
+    refreshBtn.disabled = true;
+    try{
+      const res = await fetch(API_URL, {cache:'no-store'});
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      if(json.result !== 'success' || !json.rates) throw new Error('API error');
+      const data = {
+        fetchedAt: new Date().toISOString(),
+        rateDate: json.time_last_update_unix
+          ? new Date(json.time_last_update_unix * 1000).toISOString()
+          : new Date().toISOString(),
+        rates: json.rates
+      };
+      ratesData = data;
+      saveCache(data);
+      setStatus('Kurs zaktualizowany', true);
+    }catch(err){
+      if(ratesData){
+        setStatus('Brak połączenia — pokazuję ostatni znany kurs', false);
+      }else{
+        setStatus('Brak połączenia i brak zapisanego kursu', false);
+      }
+    }finally{
+      refreshBtn.disabled = false;
+      render();
+    }
+  }
+
+  function setStatus(msg, online){
+    statusText.textContent = msg;
+    statusPin.className = 'pin' + (online===true ? ' online' : online===false ? ' offline' : '');
+  }
+
+  function render(){
+    updateStar();
+    const ccy = currencySelect.value;
+    const amount = parseFloat((amountInput.value || '').replace(',', '.')) || 0;
+
+    if(!ratesData || !ratesData.rates || !ratesData.rates[ccy]){
+      ledResult.innerHTML = '<span class="ghost">—,——</span><span class="led-suffix">zł</span>';
+      rateValueEl.textContent = 'brak danych';
+      rateDateEl.textContent = '';
+      return;
+    }
+
+    const perPln = ratesData.rates[ccy];      // ile CCY za 1 PLN
+    const pricePlnPerUnit = 1 / perPln;       // ile PLN za 1 CCY
+    const total = amount * pricePlnPerUnit;
+
+    ledResult.innerHTML = formatNumber(total) + '<span class="led-suffix">zł</span>';
+    rateValueEl.textContent = '1 ' + ccy + ' = ' + formatRate(pricePlnPerUnit) + ' zł';
+    rateDateEl.textContent = 'kurs z ' + formatDateTime(ratesData.rateDate || ratesData.fetchedAt);
+  }
+
+  currencySelect.addEventListener('change', render);
+  amountInput.addEventListener('input', render);
+  refreshBtn.addEventListener('click', fetchRates);
+
+  defaultBtn.addEventListener('click', ()=>{
+    defaultCcy = currencySelect.value;
+    try{ localStorage.setItem(DEFAULT_CCY_KEY, defaultCcy); }catch(e){}
+    updateStar();
+  });
+
+  window.addEventListener('online', ()=> fetchRates());
+  window.addEventListener('offline', ()=>{
+    setStatus('Tryb offline — ostatni znany kurs', false);
+  });
+
+  // Odśwież po powrocie do apki, jeśli dane starsze niż godzina
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && navigator.onLine){
+      const stale = !ratesData ||
+        (Date.now() - new Date(ratesData.fetchedAt).getTime()) > 3600000;
+      if(stale) fetchRates();
+    }
+  });
+
+  /* ==================== NOTATNIK ==================== */
+  const NOTEBOOKS_KEY = 'kantor_notebooks_v1';
+  const ACTIVE_NB_KEY = 'kantor_active_notebook_v1';
+
+  const noteComment    = document.getElementById('noteComment');
+  const addNoteBtn     = document.getElementById('addNoteBtn');
+  const addNoteTarget  = document.getElementById('addNoteTarget');
+  const notebookSelect = document.getElementById('notebookSelect');
+  const notebookStar   = document.getElementById('notebookStar');
+  const notebookNew    = document.getElementById('notebookNew');
+  const notebookHint   = document.getElementById('notebookHint');
+  const nbForm         = document.getElementById('nbForm');
+  const nbNameInput    = document.getElementById('nbNameInput');
+  const nbFormSave     = document.getElementById('nbFormSave');
+  const nbFormCancel   = document.getElementById('nbFormCancel');
+  const entriesList    = document.getElementById('entriesList');
+  const entriesTotal   = document.getElementById('entriesTotal');
+  const nbBottom       = document.getElementById('nbBottom');
+  const exportBtn      = document.getElementById('exportBtn');
+  const renameBtn      = document.getElementById('renameBtn');
+  const deleteNbBtn    = document.getElementById('deleteNbBtn');
+  const importBtn      = document.getElementById('importBtn');
+  const importFile     = document.getElementById('importFile');
+
+  let notebooks  = loadNotebooks();
+  let activeId   = localStorage.getItem(ACTIVE_NB_KEY) || null;
+  let selectedId = null;
+  let nbFormMode = null;
+  let savedFlashTimer = null;
+
+  function loadNotebooks(){
+    try{
+      const raw = localStorage.getItem(NOTEBOOKS_KEY);
+      if(!raw) return [];
+      const v = JSON.parse(raw);
+      return Array.isArray(v) ? v : [];
+    }catch(e){ return []; }
+  }
+  function saveNotebooks(){
+    try{ localStorage.setItem(NOTEBOOKS_KEY, JSON.stringify(notebooks)); }catch(e){}
+  }
+  function getNb(id){ return notebooks.find(n=>n.id===id) || null; }
+  function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function formatAmt(n){
+    return Number(n).toLocaleString('pl-PL', {minimumFractionDigits:0, maximumFractionDigits:2});
+  }
+  function formatDateShort(iso){
+    return new Date(iso).toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric'});
+  }
+  function plural(n, one, few, many){
+    const nn = Math.abs(n) % 100, n1 = nn % 10;
+    if(nn === 1) return one;
+    if(n1 >= 2 && n1 <= 4 && (nn < 10 || nn >= 20)) return few;
+    return many;
+  }
+
+  function setActive(id){
+    activeId = id;
+    if(id) localStorage.setItem(ACTIVE_NB_KEY, id);
+    else localStorage.removeItem(ACTIVE_NB_KEY);
+  }
+
+  function createNotebook(name){
+    name = (name||'').trim();
+    if(!name) return null;
+    const nb = { id: genId(), name: name, entries: [] };
+    notebooks.push(nb);
+    saveNotebooks();
+    setActive(nb.id);
+    selectedId = nb.id;
+    return nb;
+  }
+  function renameNotebook(id, name){
+    const nb = getNb(id); if(!nb) return;
+    name = (name||'').trim(); if(!name) return;
+    nb.name = name; saveNotebooks();
+  }
+  function deleteNotebook(id){
+    notebooks = notebooks.filter(n=>n.id!==id);
+    if(activeId === id) setActive(notebooks.length ? notebooks[0].id : null);
+    if(selectedId === id) selectedId = activeId || (notebooks[0] ? notebooks[0].id : null);
+    saveNotebooks();
+  }
+  function deleteEntry(nbId, entryId){
+    const nb = getNb(nbId); if(!nb) return;
+    nb.entries = nb.entries.filter(e=>e.id!==entryId);
+    saveNotebooks();
+    renderNotebookUI();
+  }
+
+  function flashSaved(){
+    addNoteBtn.classList.add('ok');
+    addNoteBtn.textContent = 'Zapisano ✓';
+    clearTimeout(savedFlashTimer);
+    savedFlashTimer = setTimeout(()=>{
+      addNoteBtn.classList.remove('ok');
+      addNoteBtn.textContent = '＋ Dodaj do notatnika';
+    }, 1400);
+  }
+  function warnAdd(msg){
+    addNoteTarget.textContent = msg;
+    addNoteTarget.classList.add('warn');
+    setTimeout(()=>{ addNoteTarget.classList.remove('warn'); renderAddTarget(); }, 2000);
+  }
+
+  function addEntryToActive(){
+    const nb = getNb(activeId);
+    if(!nb){ warnAdd('Najpierw utwórz notatnik poniżej'); return; }
+    const ccy = currencySelect.value;
+    const amount = parseFloat((amountInput.value||'').replace(',', '.'));
+    if(!ratesData || !ratesData.rates || !ratesData.rates[ccy] || !(amount > 0)){
+      warnAdd('Wpisz kwotę i poczekaj na kurs'); return;
+    }
+    const price = 1 / ratesData.rates[ccy];
+    nb.entries.unshift({
+      id: genId(),
+      ts: new Date().toISOString(),
+      ccy: ccy,
+      amount: amount,
+      pln: amount * price,
+      rate: price,
+      rateDate: ratesData.rateDate || ratesData.fetchedAt,
+      comment: (noteComment.value || '').trim()
+    });
+    saveNotebooks();
+    noteComment.value = '';
+    renderNotebookUI();
+    flashSaved();
+  }
+
+  function renderAddTarget(){
+    if(addNoteTarget.classList.contains('warn')) return;
+    const act = getNb(activeId);
+    if(act){
+      addNoteBtn.disabled = false;
+      addNoteTarget.innerHTML = '→ zapis do: <b>' + escapeHtml(act.name) + '</b> ★';
+    }else{
+      addNoteBtn.disabled = true;
+      addNoteTarget.innerHTML = 'Utwórz notatnik poniżej, aby zapisywać przeliczenia';
+    }
+  }
+
+  function renderEntries(){
+    const nb = getNb(selectedId);
+    entriesList.innerHTML = '';
+    if(!nb){ entriesTotal.textContent = ''; return; }
+    if(!nb.entries.length){
+      const d = document.createElement('div');
+      d.className = 'entries-empty';
+      d.textContent = 'Brak wpisów w tej notatce.';
+      entriesList.appendChild(d);
+      entriesTotal.textContent = '';
+      return;
+    }
+    let sum = 0;
+    nb.entries.forEach(e=>{
+      sum += e.pln;
+      const row  = document.createElement('div'); row.className = 'entry';
+      const body = document.createElement('div'); body.className = 'entry-body';
+      const l1 = document.createElement('div'); l1.className = 'entry-line1';
+      l1.innerHTML = e.comment ? escapeHtml(e.comment) : '<span class="muted">bez opisu</span>';
+      const l2 = document.createElement('div'); l2.className = 'entry-line2';
+      l2.innerHTML = formatAmt(e.amount) + ' ' + e.ccy +
+        ' <span class="arrow">→</span> <b class="pln">' + formatNumber(e.pln) + ' zł</b>';
+      const l3 = document.createElement('div'); l3.className = 'entry-line3';
+      l3.textContent = formatDateTime(e.ts) + ' · kurs z ' + formatDateShort(e.rateDate);
+      body.appendChild(l1); body.appendChild(l2); body.appendChild(l3);
+      const del = document.createElement('button');
+      del.className = 'entry-del'; del.type = 'button';
+      del.setAttribute('aria-label', 'Usuń wpis'); del.textContent = '🗑';
+      del.addEventListener('click', ()=>{ if(confirm('Usunąć ten wpis?')) deleteEntry(nb.id, e.id); });
+      row.appendChild(body); row.appendChild(del);
+      entriesList.appendChild(row);
+    });
+    entriesTotal.innerHTML = 'Razem: <b>' + formatNumber(sum) + ' zł</b> · ' +
+      nb.entries.length + ' ' + plural(nb.entries.length, 'wpis', 'wpisy', 'wpisów');
+  }
+
+  function renderNotebookUI(){
+    if(activeId && !getNb(activeId)) setActive(notebooks.length ? notebooks[0].id : null);
+    if(!selectedId || !getNb(selectedId)) selectedId = activeId || (notebooks[0] ? notebooks[0].id : null);
+
+    notebookSelect.innerHTML = '';
+    if(!notebooks.length){
+      const opt = document.createElement('option');
+      opt.value = ''; opt.textContent = '— brak notatek —';
+      notebookSelect.appendChild(opt);
+      notebookSelect.disabled = true;
+    }else{
+      notebookSelect.disabled = false;
+      notebooks.forEach(n=>{
+        const opt = document.createElement('option');
+        opt.value = n.id;
+        opt.textContent = (n.id === activeId ? '★ ' : '') + n.name;
+        notebookSelect.appendChild(opt);
+      });
+      notebookSelect.value = selectedId;
+    }
+
+    const selIsActive = !!selectedId && selectedId === activeId;
+    notebookStar.textContent = selIsActive ? '★' : '☆';
+    notebookStar.classList.toggle('active', selIsActive);
+    notebookStar.disabled = !notebooks.length;
+
+    if(!notebooks.length){
+      notebookHint.innerHTML = 'Nie masz jeszcze notatnika — stuknij <b>＋</b>, aby utworzyć (np. „Albania 2026"), albo zaimportuj plik CSV poniżej.';
+    }else if(selIsActive){
+      notebookHint.innerHTML = '★ Aktywna notatka — tu trafiają nowe zapisy.';
+    }else{
+      const act = getNb(activeId);
+      notebookHint.innerHTML = 'Stuknij ☆, aby zapisywać do <b>' + escapeHtml(getNb(selectedId).name) + '</b>' +
+        (act ? ' (teraz aktywna: <b>' + escapeHtml(act.name) + '</b>)' : '');
+    }
+
+    nbBottom.hidden = !notebooks.length;
+    renderAddTarget();
+    renderEntries();
+  }
+
+  /* eksport do CSV (separator „;", przecinek dziesiętny, BOM — otwiera się w Numbers/Excelu) */
+  function csvEscape(v){
+    v = String(v);
+    return /[";\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  function buildCSV(nb){
+    const head = ['Data i godzina','Waluta','Kwota','Kwota PLN','Kurs (1 j. = zł)','Data kursu','Komentarz'];
+    const lines = [head.join(';')];
+    nb.entries.slice().reverse().forEach(e=>{
+      lines.push([
+        formatDateTime(e.ts),
+        e.ccy,
+        Number(e.amount).toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2, useGrouping:false}),
+        Number(e.pln).toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2, useGrouping:false}),
+        Number(e.rate).toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:4, useGrouping:false}),
+        formatDateShort(e.rateDate),
+        e.comment || ''
+      ].map(csvEscape).join(';'));
+    });
+    return lines.join('\r\n');
+  }
+  function safeName(s){
+    return (String(s).replace(/[\/\\:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim()) || 'notatnik';
+  }
+  async function exportSelected(){
+    const nb = getNb(selectedId);
+    if(!nb) return;
+    if(!nb.entries.length){ alert('Ta notatka nie ma jeszcze wpisów do wyeksportowania.'); return; }
+    const csv  = '﻿' + buildCSV(nb);
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    const fname = safeName(nb.name) + '.csv';
+    try{
+      const file = new File([blob], fname, {type:'text/csv'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title: nb.name});
+        return;
+      }
+    }catch(err){
+      if(err && err.name === 'AbortError') return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  }
+
+  /* import z CSV (odtworzenie logu po wyczyszczeniu; scalanie z pomijaniem duplikatów) */
+  function parseCSV(text, delim){
+    if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // BOM
+    const rows = []; let row = [], field = '', inQ = false, i = 0;
+    while(i < text.length){
+      const c = text[i];
+      if(inQ){
+        if(c === '"'){
+          if(text[i+1] === '"'){ field += '"'; i += 2; continue; }
+          inQ = false; i++; continue;
+        }
+        field += c; i++; continue;
+      }
+      if(c === '"'){ inQ = true; i++; continue; }
+      if(c === delim){ row.push(field); field = ''; i++; continue; }
+      if(c === '\r'){ i++; continue; }
+      if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+      field += c; i++;
+    }
+    if(field.length || row.length){ row.push(field); rows.push(row); }
+    return rows;
+  }
+  function parsePlNumber(s){
+    if(s == null) return NaN;
+    s = String(s).trim();
+    if(s === '') return NaN;
+    s = (s.indexOf(',') >= 0)
+      ? s.replace(/[\s.]/g, '').replace(',', '.')   // przecinek dziesietny; kropka/spacja = separator tysiecy
+      : s.replace(/\s/g, '');
+    return parseFloat(s);
+  }
+  function parsePlDateTime(s){
+    const m = String(s == null ? '' : s).trim().match(/(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/);
+    if(!m) return null;
+    const dt = new Date(+m[3], +m[2]-1, +m[1], m[4] != null ? +m[4] : 0, m[5] != null ? +m[5] : 0);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+  function importEntriesFromCSV(text){
+    const rows = parseCSV(text, ';');
+    const entries = [];
+    rows.forEach(r=>{
+      if(!r) return;
+      const c = r.map(x=>(x == null ? '' : String(x)).trim());
+      if(c.every(x=>x === '')) return;                                  // pusta linia
+      if(c[0] === 'Data i godzina' || (c[1]||'').toLowerCase() === 'waluta') return; // nagłówek
+      const dt     = parsePlDateTime(c[0]);
+      const ccy    = (c[1] || '').toUpperCase();
+      const amount = parsePlNumber(c[2]);
+      const pln    = parsePlNumber(c[3]);
+      const rate   = parsePlNumber(c[4]);
+      const rd     = parsePlDateTime(c[5]);
+      if(!ccy || !(amount > 0) || !dt) return;                         // wiersz nieprawidłowy
+      const rateVal = !isNaN(rate) ? rate : (amount ? (isNaN(pln) ? 0 : pln) / amount : 0);
+      const plnVal  = !isNaN(pln)  ? pln  : amount * rateVal;
+      entries.push({
+        id: genId(),
+        ts: dt.toISOString(),
+        ccy: ccy,
+        amount: amount,
+        pln: plnVal,
+        rate: rateVal,
+        rateDate: rd ? rd.toISOString() : dt.toISOString(),
+        comment: c[6] || ''
+      });
+    });
+    return entries;
+  }
+  function entryKey(e){ return [String(e.ts).slice(0,16), e.ccy, e.amount, e.comment].join('|'); }
+
+  function handleImportFile(file){
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const parsed = importEntriesFromCSV(String(reader.result || ''));
+      if(!parsed.length){
+        alert('Nie znalazłem żadnych wpisów w tym pliku. Upewnij się, że to plik CSV wyeksportowany z tej apki.');
+        return;
+      }
+      const name = file.name.replace(/\.[^.]+$/, '').trim() || 'Import';
+      let nb = notebooks.find(n=>n.name === name);
+      const created = !nb;
+      if(!nb){ nb = { id: genId(), name: name, entries: [] }; notebooks.push(nb); }
+      const existing = new Set(nb.entries.map(entryKey));
+      let added = 0, skipped = 0;
+      parsed.forEach(e=>{
+        const k = entryKey(e);
+        if(existing.has(k)){ skipped++; return; }
+        existing.add(k); nb.entries.push(e); added++;
+      });
+      nb.entries.sort((a,b)=> a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0)); // najnowsze u góry
+      saveNotebooks();
+      if(created) setActive(nb.id);
+      selectedId = nb.id;
+      renderNotebookUI();
+      alert('Zaimportowano ' + added + ' ' + plural(added, 'wpis', 'wpisy', 'wpisów') + ' do „' + nb.name + '".' +
+        (skipped ? ' Pominięto ' + skipped + ' ' + plural(skipped, 'duplikat', 'duplikaty', 'duplikatów') + '.' : ''));
+    };
+    reader.onerror = ()=> alert('Nie udało się odczytać pliku.');
+    reader.readAsText(file, 'utf-8');
+  }
+
+  /* formularz: nowa notatka / zmiana nazwy */
+  function openNbForm(mode){
+    nbFormMode = mode;
+    nbForm.hidden = false;
+    if(mode === 'rename'){
+      const nb = getNb(selectedId);
+      nbNameInput.value = nb ? nb.name : '';
+      nbFormSave.textContent = 'Zapisz nazwę';
+    }else{
+      nbNameInput.value = '';
+      nbFormSave.textContent = 'Utwórz';
+    }
+    nbNameInput.focus();
+  }
+  function closeNbForm(){ nbForm.hidden = true; nbFormMode = null; nbNameInput.value = ''; }
+  function submitNbForm(){
+    const name = nbNameInput.value.trim();
+    if(!name){ nbNameInput.focus(); return; }
+    if(nbFormMode === 'rename') renameNotebook(selectedId, name);
+    else createNotebook(name);
+    closeNbForm();
+    renderNotebookUI();
+  }
+
+  notebookSelect.addEventListener('change', ()=>{ selectedId = notebookSelect.value; renderNotebookUI(); });
+  notebookStar.addEventListener('click', ()=>{ if(selectedId){ setActive(selectedId); renderNotebookUI(); } });
+  notebookNew.addEventListener('click', ()=> openNbForm('create'));
+  renameBtn.addEventListener('click', ()=> openNbForm('rename'));
+  deleteNbBtn.addEventListener('click', ()=>{
+    const nb = getNb(selectedId); if(!nb) return;
+    if(confirm('Usunąć notatnik „' + nb.name + '" wraz z ' + nb.entries.length + ' wpisami? Tego nie można cofnąć.')){
+      deleteNotebook(nb.id);
+      renderNotebookUI();
+    }
+  });
+  nbFormSave.addEventListener('click', submitNbForm);
+  nbFormCancel.addEventListener('click', closeNbForm);
+  nbNameInput.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); submitNbForm(); } });
+
+  addNoteBtn.addEventListener('click', addEntryToActive);
+  noteComment.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); addEntryToActive(); } });
+  exportBtn.addEventListener('click', exportSelected);
+  importBtn.addEventListener('click', ()=> importFile.click());
+  importFile.addEventListener('change', ()=>{
+    const f = importFile.files && importFile.files[0];
+    if(f) handleImportFile(f);
+    importFile.value = '';   // pozwól wczytać ten sam plik ponownie
+  });
+
+  renderNotebookUI();
+
+  // init
+  if(ratesData){
+    render();
+    setStatus('Ostatni zapisany kurs z ' + formatDateTime(ratesData.rateDate || ratesData.fetchedAt), navigator.onLine ? null : false);
+  }else{
+    render();
+  }
+  if(navigator.onLine){
+    fetchRates();
+  }else{
+    setStatus('Brak połączenia — pokazuję ostatni znany kurs', false);
+  }
+})();
+</script>
+</body>
+</html>
