@@ -1106,6 +1106,13 @@
   }else{
     setStatus('Brak połączenia — pokazuję ostatni znany kurs', false);
   }
+
+  // Start bez internetu: service worker (sw.js) trzyma kopię apki i fontów
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
 })();
 </script>
 </body>
