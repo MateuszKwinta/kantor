@@ -3,3 +3,6 @@ INSTRUKCJE.md
 
 # Systemowe
 .DS_Store
+
+# Kody QR (artefakty do udostępniania, nie część apki)
+kantor-qr.*
